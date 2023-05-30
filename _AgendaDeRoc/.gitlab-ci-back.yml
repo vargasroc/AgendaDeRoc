@@ -1,0 +1,58 @@
+stages:
+  - build 
+  - test
+  - package
+  - deploy
+
+build-job:      
+  stage: build
+  image: maven:latest
+  script:
+    - echo "Compiling the code..."
+    - cd backEnd
+    - cd proyectoIntegrador
+    - "mvn compile"
+    - echo "Compile complete."
+
+unit-test-job:   
+  stage: test
+  image: maven:latest
+  script:
+    - echo "Running unit tests... This will take about 60 seconds."
+    - cd backEnd
+    - cd proyectoIntegrador
+    - "mvn compile"
+    #- "mvn clean test"
+    - echo "Test Done" 
+
+package-job:   
+  stage: package
+  image: maven:latest 
+  script:
+    - echo "Running Package"
+    - cd backEnd
+    - cd proyectoIntegrador
+    - "mvn compile"
+    - "mvn package"
+  artifacts:
+    name: proyectoIntegrador-0.0.1-SNAPSHOT.jar
+    paths:
+      - backEnd/proyectoIntegrador/target/proyectoIntegrador-0.0.1-SNAPSHOT.jar
+
+deploy_job:
+  stage: deploy
+  image: alpine:3.11
+  before_script:
+    - apk update && apk add openssh-client bash
+    - mkdir -p ~/.ssh
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
+    - touch ~/.ssh/config
+    - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+    - ssh-keyscan -H $DEPLOY_SERVER_IP >> ~/.ssh/known_hosts
+
+  script:
+    - ssh ubuntu@$DEPLOY_SERVER_IP "sudo apt install openjdk-17-jdk -y"
+    - ssh ubuntu@$DEPLOY_SERVER_IP "sudo systemctl stop proyectoIntegrador.service"
+    - scp backEnd/proyectoIntegrador/target/proyectoIntegrador-0.0.1-SNAPSHOT.jar ubuntu@$DEPLOY_SERVER_IP:~/proyectoIntegrador/
+    - ssh ubuntu@$DEPLOY_SERVER_IP "sudo systemctl start proyectoIntegrador.service"

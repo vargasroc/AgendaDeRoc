@@ -1,0 +1,56 @@
+stages:
+    - test
+    - build
+    - deploy
+
+
+before_script:
+    - cd FrontEnd
+    - cd glamphouse
+    #- rm -rf node_modules 
+    #- rm -rf package-lock.json
+    #- npm cache clean --force
+    #- npm cache verify
+    - rm -rf build
+    - yarn install 
+unit-test-job:
+    stage: test
+    script:
+        - echo "corriendo test"
+        #- npm ci
+      #  - npm run test
+        - echo "test finalizados"
+
+build-job:
+    stage: build
+    before_script:
+    - cd FrontEnd
+    - cd glamphouse
+    #- rm -rf node_modules 
+    #- rm -rf package-lock.json
+    #- npm cache clean --force
+    #- npm cache verify
+    - rm -rf build
+    - yarn install
+    - yarn add jwt-decode
+    script:
+        #- npm ci
+        - npm run build
+        - rm -rf public
+        - cp build/Index.html 
+        - mv build public
+    artifacts:
+        paths:
+            - FrontEnd/glamphouse/public
+            
+deploy to s3:
+  stage: deploy
+  image: 
+    name: amazon/aws-cli
+    entrypoint: [""]
+  script:
+    - aws --version
+    - aws s3 rm s3://$S3_BUCKET --recursive
+    - aws s3 cp public s3://$S3_BUCKET --recursive
+
+
